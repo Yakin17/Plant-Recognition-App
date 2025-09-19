@@ -9,9 +9,11 @@ class PlantNetService {
   static final String? _apiKey = dotenv.env['PLANTNET_API_KEY'];
   static final String _baseUrl = dotenv.env['PLANTNET_BASE_URL'] ?? 'https://my-api.plantnet.org/v2';
 
+  //Identification de plantes (deja existant)
   static Future<PlantIdentificationResponse> identifyPlant(
     File imageFile, {
       String organ = 'auto',
+      String project = 'all',
     }
   ) async {
     if(_apiKey == null) {
@@ -20,7 +22,7 @@ class PlantNetService {
 
     //Preparer la requete
     var request = http.MultipartRequest('POST', 
-    Uri.parse('$_baseUrl/identify/all?api-key=$_apiKey'),
+    Uri.parse('$_baseUrl/identify/$project?api-key=$_apiKey'),
     );
 
     //Ajouter l'image
@@ -48,6 +50,96 @@ class PlantNetService {
         throw Exception('Failed to identify plant: ${response.statusCode} - $responseString');
       }
   }
+
+  //Obtenir les especes d'un projet
+  static Future<List<PlantSpecies>> getProjectSpecies(String project) async {
+    if (_apiKey == null) {
+      throw Exception('PlantNet API key not found');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/projects/$project/species?api-keys=$_apiKey'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return( data['species'] as List).map((e) => PlantSpecies.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load project species: ${response.statusCode}');
+    }
+  }
+
+  //Obtenir les details d'une espece
+  static Future<PlantSpeciesDetails> getSpeciesDetails(String speciesId) async {
+    if (_apiKey == null) {
+      throw Exception('PlantNet API key not found');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/species/$speciesId?api-key=$_apiKey'),
+    );
+
+    if (response.statusCode == 200) {
+      return PlantSpeciesDetails.fromJson(json.decode(response.body));
+    } else {
+      throw Exception('Failed to load species details: ${response.statusCode}');
+    }
+  }
+
+  //obtenir les images d'une espece
+  static Future<List<PlantImage>> getSpeciesImages(String speciesId, {int limit = 10}) async {
+    if (_apiKey == null) {
+      throw Exception('PlantNet API key not found');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/species/$speciesId/images?limit=$limit&api-key=$_apiKey'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return (data['images'] as List).map((e) => PlantImage.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load species images: ${response.statusCode}');
+    }
+  }
+
+  //obtenir la liste des projets
+  static Future<List<PlantProject>> getProjects() async {
+    if (_apiKey == null) {
+      throw Exception('PlantNet API key not found');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/projects?api-key=$_apiKey'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return (data['projects'] as List).map((e) => PlantProject.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load projects: ${response.statusCode}');
+    }
+  }
+
+  //rechercher des especes
+ static Future<List<PlantSpecies>> searchSpecies(String query, {int limit = 10}) async {
+  if (_apiKey == null) {
+    throw Exception('PlantNet API key not found');
+  }
+
+  final response = await http.get(
+    Uri.parse('$_baseUrl/species/search?q=${Uri.encodeQueryComponent(query)}&limit=$limit&api-key=$_apiKey'),
+  );
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    return (data['species'] as List).map((e) => PlantSpecies.fromJson(e)).toList();
+  } else {
+    throw Exception('Failed to search species: ${response.statusCode} - ${response.body}');
+  }
+}
+
 
   //Methode pour compresse l'image si necessare
   static Future<File> compressImage(File imageFile) async {

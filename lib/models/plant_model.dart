@@ -112,3 +112,84 @@ class PlantImageUrl {
   }
 }
 
+class PlantSpeciesDetails {
+  final String id;
+  final String scientificName;
+  final PlantGenus genus;
+  final PlantFamily family;
+  final List<String> commonNames;
+  final String? description;
+  final String? medicinalUses;
+  final String? habitat;
+  final Map<String, dynamic>? gbif;
+
+  PlantSpeciesDetails({
+    required this.id,
+    required this.scientificName,
+    required this.genus,
+    required this.family,
+    required this.commonNames,
+    this.description,
+    this.medicinalUses,
+    this.habitat,
+    this.gbif,
+  });
+
+  factory PlantSpeciesDetails.fromJson(Map<String, dynamic> json) {
+    var commonNamesList = json['commonNames'] as List;
+    List<String> commonNames = commonNamesList.map((i) => i.toString()).toList();
+
+    return PlantSpeciesDetails(
+      id: json['id'],
+      scientificName: json['scientificName'],
+      genus: PlantGenus.fromJson(json['genus']),
+      family:PlantFamily.fromJson(json['family']),
+      commonNames: commonNames,
+      description: json['description'],
+      medicinalUses: json['medidinalUses'],
+      habitat: json['habitat'],
+      gbif: json['gbif'],
+    );
+  }
+}
+
+class PlantProject {
+  final String id;
+  final String name;
+  final String? description;
+  final int speciesCount;
+  final int imageCount;
+
+  PlantProject({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.speciesCount,
+    required this.imageCount,
+  });
+
+  factory PlantProject.fromJson(Map<String, dynamic> json) {
+    final dynamic speciesCountRaw = json['speciesCount'];
+    final dynamic imageCountRaw = json['imageCount'];
+
+    int parseToInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
+        final parsedDouble = double.tryParse(value);
+        if (parsedDouble != null) return parsedDouble.toInt();
+      }
+      return 0;
+    }
+
+    return PlantProject(
+      id: (json['id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      description: (json['description'])?.toString(),
+      speciesCount: parseToInt(speciesCountRaw),
+      imageCount: parseToInt(imageCountRaw),
+    );
+  }
+}

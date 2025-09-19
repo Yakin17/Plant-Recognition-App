@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:plantrecognition_app/models/plant_model.dart';
 import 'package:plantrecognition_app/pages/account_page.dart';
+import 'package:plantrecognition_app/pages/explore_plants_page.dart';
 import 'package:plantrecognition_app/pages/homepage.dart';
 import 'package:plantrecognition_app/pages/camera_page.dart';
 import 'package:plantrecognition_app/pages/login_page.dart';
+import 'package:plantrecognition_app/pages/plant_details_page.dart';
 import 'package:plantrecognition_app/pages/plant_results_page.dart';
+import 'package:plantrecognition_app/pages/search_plants_page.dart';
 import 'package:plantrecognition_app/pages/splash_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -118,10 +121,17 @@ class MyApp extends StatelessWidget {
         '/account': (context) => const AccountPage(),
         '/homepage': (context) => const HomePage(),
         '/camera': (context) => const CameraPage(),
+        '/search': (context) => const SearchPlantsPage(),
         '/plant_results': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as PlantIdentificationResponse;
           return PlantResultsPage(identificationResult: args);
+        },
+        '/explore':(context) => const ExplorePlantsPage(),
+        '/plant_details': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as String;
+          return PlantDetailsPage(speciesId: args);
         }
+
       },
     );
   }
