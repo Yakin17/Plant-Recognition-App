@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:plantrecognition_app/services/plantnet_service.dart';
+import 'package:plantrecognition_app/models/plant_model.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -12,6 +14,8 @@ class CameraPage extends StatefulWidget {
 class _CameraPageState extends State<CameraPage> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  bool _isProcessing = false;
+  PlantIdentificationResponse? _identificationResult;
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -19,10 +23,8 @@ class _CameraPageState extends State<CameraPage> {
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
+          _identificationResult = null; // Réinitialiser les résultats précédents
         });
-        
-        // Ici vous pouvez ajouter la logique pour traiter l'image
-        // et l'envoyer à votre API de reconnaissance de plantes
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -31,15 +33,38 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  void _processImage() {
-    if (_selectedImage != null) {
-      // Naviguer vers la page de résultats ou traiter l'image
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Traitement de l\'image en cours...')),
+  Future<void> _identifyPlant() async {
+    if (_selectedImage == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      // Compresser l'image avant l'envoi
+      final compressedImage = await PlantNetService.compressImage(_selectedImage!);
+      
+      // Appeler l'API PlantNet
+      final result = await PlantNetService.identifyPlant(compressedImage);
+      
+      setState(() {
+        _identificationResult = result;
+        _isProcessing = false;
+      });
+
+      // Naviguer vers la page de résultats
+      Navigator.of(context).pushNamed(
+        '/plant_results',
+        arguments: result,
       );
-    } else {
+
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner une image d\'abord')),
+        SnackBar(content: Text('Erreur d\'identification: ${e.toString()}')),
       );
     }
   }
@@ -155,11 +180,11 @@ class _CameraPageState extends State<CameraPage> {
 
             const SizedBox(height: 30),
 
-            // Bouton Next
+            // Bouton d'identification
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                onPressed: _processImage,
+                onPressed: _isProcessing ? null : _identifyPlant,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2E7D32),
                   foregroundColor: Colors.white,
@@ -172,14 +197,23 @@ class _CameraPageState extends State<CameraPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Identify Plant'),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward, size: 20),
-                  ],
-                ),
+                child: _isProcessing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Identify Plant'),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 20),
+                        ],
+                      ),
               ),
             ),
           ],
