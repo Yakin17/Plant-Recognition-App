@@ -58,6 +58,19 @@ class _SplashPageState extends State<SplashPage> {
           print('Web session recovery: $e');
         }
       }
+
+      // Sur mobile: attendre brièvement que le lien profond initialise la session
+      // (Supabase traite l'intent après l'init; on laisse un petit délai)
+      for (int i = 0; i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (supabase.auth.currentSession != null) {
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed('/account');
+          }
+          _isRedirecting = false;
+          return;
+        }
+      }
     } catch (e) {
       print('Redirect error: $e');
     }

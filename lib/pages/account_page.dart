@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plantrecognition_app/main.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import ajouté
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -34,20 +34,19 @@ class _AccountPageState extends State<AccountPage> {
       final user = supabase.auth.currentUser;
       if (user == null) return;
 
-      // Vérifier et créer le profil si nécessaire
+      // S'assurer que le profil existe avec l'email
       await _ensureProfileExists(user);
 
-      // Charger les données du profil
       final data = await supabase
           .from('profiles')
           .select()
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
       if (mounted) {
         setState(() {
-          _usernameController.text = (data['username'] ?? '').toString();
-          _websiteController.text = (data['website'] ?? '').toString();
+          _usernameController.text = (data?['username'] ?? '').toString();
+          _websiteController.text = (data?['website'] ?? '').toString();
           _loading = false;
         });
       }
@@ -63,20 +62,20 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> _ensureProfileExists(User user) async {
     try {
-      // Vérifier si le profil existe déjà
-      final existingProfile = await supabase
+      final existing = await supabase
           .from('profiles')
           .select()
           .eq('id', user.id)
           .maybeSingle();
 
-      if (existingProfile == null) {
-        // Créer le profil s'il n'existe pas
-        await supabase.from('profiles').upsert({
+      if (existing == null) {
+        // Créer le profil avec l'email si il n'existe pas
+        await supabase.from('profiles').insert({
           'id': user.id,
           'email': user.email,
           'username': '',
           'website': '',
+          'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
       }
@@ -108,6 +107,9 @@ class _AccountPageState extends State<AccountPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile saved successfully')),
         );
+        
+        // Rediriger vers homepage après la sauvegarde
+        Navigator.of(context).pushReplacementNamed('/homepage');
       }
     } catch (error) {
       if (mounted) {
@@ -140,58 +142,164 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF007BFF),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        title: const Text(
+          'Account',
+          style: TextStyle(
+            color: Color(0xFF212529),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: false,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_saving) const LinearProgressIndicator(),
+              if (_saving) const LinearProgressIndicator(
+                color: Color(0xFF007BFF),
+                backgroundColor: Color(0xFFE9ECEF),
+              ),
               if (_saving) const SizedBox(height: 16),
               
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
+              const Text(
+                'Username',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212529),
+                  fontSize: 16,
                 ),
               ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _usernameController,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFFCED4DA)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFFCED4DA)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFF007BFF)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+                style: const TextStyle(fontSize: 16),
+              ),
               const SizedBox(height: 16),
+              const Text(
+                'Website',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212529),
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _websiteController,
-                decoration: const InputDecoration(
-                  labelText: 'Website',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFFCED4DA)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFFCED4DA)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: Color(0xFF007BFF)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                 ),
+                style: const TextStyle(fontSize: 16),
                 keyboardType: TextInputType.url,
               ),
               const SizedBox(height: 24),
               
-              ElevatedButton(
-                onPressed: _saving ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF007BFF),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    elevation: 0,
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Save Profile'),
                 ),
-                child: _saving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Save Profile'),
               ),
               const SizedBox(height: 16),
               
-              ElevatedButton(
-                onPressed: _saving ? null : _signOut,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  minimumSize: const Size(double.infinity, 50),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _signOut,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC3545),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    elevation: 0,
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: const Text('Sign Out'),
                 ),
-                child: const Text('Sign Out'),
               ),
             ],
           ),
